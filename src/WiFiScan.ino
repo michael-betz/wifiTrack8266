@@ -14,7 +14,8 @@ void setup()
 void loop()
 {
 	char host_buf[DNS_REQUEST_BUFFER_SIZE(255)];
-	char pl_buf[256];
+	uint8_t pl_buf[256], *pl_p;
+	unsigned long ts;
 	IPAddress ip_res;
 	// WiFi.scanNetworks will return the number of networks found
 	int n = WiFi.scanNetworks();
@@ -39,8 +40,11 @@ void loop()
 			delay(100);
 			if (WiFi.status() == WL_CONNECTED) {
 				Serial.print("got IP!!!\n");
-				sprintf(pl_buf, "%lu", millis());
-				dnsEncode((uint8_t*)pl_buf, strlen(pl_buf), (uint8_t*)host_buf);
+				ts = millis();
+				pl_p = pl_buf;
+				memcpy(pl_p, &ts, sizeof(ts));
+				pl_p += sizeof(ts);
+				dnsEncode(pl_buf, pl_p - pl_buf, (uint8_t*)host_buf);
 				WiFi.hostByName(host_buf, ip_res, DNS_TIMEOUT);
 				Serial.print(ip_res);
 				break;
