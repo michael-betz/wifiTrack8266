@@ -28,13 +28,21 @@ def hexdump(res):
 g_lastqn = ''
 
 
+def is_printable(s):
+    printable_chars = bytes(string.printable, 'ascii')
+    return all(c in printable_chars for c in s)
+
 def dns_response(data, clientAddress):
     global g_lastqn
     """
     This is called for each received packet. Do something with it
     """
     ts = datetime.datetime.now()
-    request = DNSRecord.parse(data)
+    try:
+        request = DNSRecord.parse(data)
+    except Exception as e:
+        print(type(e), e)
+        return bytes()
     reply = DNSRecord(
         DNSHeader(id=request.header.id, qr=1, aa=1, ra=1),
         q=request.q
@@ -45,11 +53,14 @@ def dns_response(data, clientAddress):
     qt = QTYPE[qtype]   # Should be `A` if valid request
 
     if qn == g_lastqn:
-        return bytes()
+        return reply.pack()
     g_lastqn = qn
 
+    if qt != 'A' or "_" in qn:
+        return reply.pack()
+
     if not qn.lower().endswith(args.domain + '.'):
-        return bytes()
+        return reply.pack()
 
     print('{0} :{1:>3s} : {2:s} : '.format(ts, qt, qn), end='')
     if args.mqtt_srv:
@@ -57,19 +68,19 @@ def dns_response(data, clientAddress):
         mc.publish('dns/raw', qn)
     try:
         payload = dnsC.dns_dec(qn.replace(args.domain, ''))
-    except RuntimeError as e:
-        print("ERR", type(e), e, end='')
-        payload = bytearray()
+    except Exception as e:
+        print("DECODE ERROR", type(e), e, end='')
+        payload = bytes()
     if len(payload):
         if args.mqtt_srv:
             mc.publish('dns/payload', payload)
-        try:
+        if is_printable(payload):
             print(payload.decode(), end='')
-        except Exception:
+        else:
             hexdump(payload)
     rIP = '13.37.13.{0}'.format(len(payload))
     reply.add_answer(
-        RR(rname=qname, rtype=qtype, rclass=1, ttl=10, rdata=A(rIP))
+        RR(rname=qname, rtype=qtype, rclass=1, ttl=5, rdata=A(rIP))
     )
     print()
     return reply.pack()
@@ -84,13 +95,10 @@ class BaseRequestHandler(socketserver.BaseRequestHandler):
         raise NotImplementedError
 
     def handle(self):
-        try:
-            data = self.get_data()
-            self.send_data(
-                dns_response(data, clientAddress=self.client_address)
-            )
-        except Exception:
-            traceback.print_exc(file=sys.stderr)
+        data = self.get_data()
+        self.send_data(
+            dns_response(data, clientAddress=self.client_address)
+        )
 
 
 class TCPRequestHandler(BaseRequestHandler):

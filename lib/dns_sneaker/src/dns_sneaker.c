@@ -9,8 +9,8 @@
 // payload is padded to integer multiple of AES_BLOCK_SIZE before AES encryption
 #define AES_BLOCK_SIZE 16
 
-// maximum length [chars] of a DNS sub-domain
-#define LBL_LEN 63
+// maximum length [chars] of a DNS sub-domain (63)
+#define LBL_LEN 60
 
 static const char *g_cod_tbl;
 

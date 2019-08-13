@@ -9,10 +9,13 @@ Especially in urban environments with many public hot-spots this might be a good
 
 # Instructions
 
-`lib/dns_sneaker` contains the library for coding data into DNS names.
-
-`lib/dns_sneaker/test` contains a test-bench which can be built with `make` and ran on linux.
-
 `pio run -t upload -t monitor` to program the ESP8266. I'm using a nodemcu board with integrated USB connection.
 
-`dnsd` contains the server part, which runs all on python. Make sure your ISP does not block UDP port 53.
+`dns_keygen.py` generates the random pre-shared key for the encryption. It writes `secrets.json` for the server and `secrets.h` for the esp8266 node if they don't exist already. It is run automatically on build. Requires `pycrypto` library.
+
+`lib/dns_sneaker` library for coding data into DNS names.
+
+`lib/dns_sneaker/test` test-bench which can be built with `make` and runs on linux.
+
+`dnsd` DNS server which runs on python3. Make sure your ISP does not block UDP port 53.
+
